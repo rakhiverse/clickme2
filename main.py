@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 import shutil
 import os
 import chromadb
+from gradio_client import file
 from face_utils import get_face_embeddings
 
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
@@ -65,8 +66,8 @@ async def upload_event_photos(background_tasks: BackgroundTasks, event_id: str =
             shutil.copyfileobj(file.file, f)
         
         # Schedule AI face processing in background so HTTP response is instant (no 502 timeout!)
-        background_tasks.add_task(process_photo_faces, save_path, event_id, file.filename)
-        uploaded_count += 1
+    process_photo_faces(save_path, event_id, file.filename)
+    uploaded_count += 1
 
     return {
         "status": "success",

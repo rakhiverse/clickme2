@@ -9,7 +9,7 @@ def get_app():
     if app is None:
         # Load ONLY detection & recognition modules to fit within 512MB RAM free tier
         app = insightface.app.FaceAnalysis(
-            name='buffalo_l',
+            name='buffalo_s',
             allowed_modules=['detection', 'recognition']
         )
         app.prepare(ctx_id=-1, det_size=(640,640))

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ClickMe — Find Yourself in the Crowd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dark-0:#101012;
+    --dark-1:#18181b;
+    --dark-2:#212124;
+    --line:#333338;
+    --paper:#f4f2ee;
+    --safelight:#e0402c;
+    --safelight-dim:#a13421;
+    --green-tally:#3ea36a;
+    --text-hi:#f4f2ee;
+    --text-lo:#8c8c93;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--dark-0);
+    color:var(--text-hi);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- film sprocket strip ---------- */
+  .sprocket-row{
+    display:flex;
+    justify-content:space-evenly;
+    padding:6px 0;
+    background:var(--dark-1);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .sprocket-row span{
+    width:9px;height:9px;border-radius:2px;
+    background:var(--dark-0);
+    border:1px solid #000;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    padding:34px 20px 22px;
+    text-align:center;
+    position:relative;
+  }
+  .logo{
+    font-family:'Bebas Neue', sans-serif;
+    font-size:clamp(40px,9vw,64px);
+    letter-spacing:4px;
+    line-height:1;
+    margin:0;
+  }
+  .logo span{ color:var(--safelight); }
+  .tagline{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--text-lo);
+    margin-top:10px;
+  }
+
+  /* ---------- mode toggle ---------- */
+  .toggle-wrap{
+    display:flex;
+    justify-content:center;
+    margin:26px 0 8px;
+  }
+  .toggle{
+    display:inline-flex;
+    background:var(--dark-1);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px;
+  }
+  .toggle button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    padding:10px 20px;
+    border-radius:999px;
+    border:none;
+    background:transparent;
+    color:var(--text-lo);
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .toggle button.active{
+    background:var(--paper);
+    color:var(--dark-0);
+  }
+
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:20px 20px 80px;
+  }
+
+  .panel{ display:none; animation:fadeIn .35s ease; }
+  .panel.active{ display:block; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  label.field-label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--text-lo);
+    margin:22px 0 8px;
+  }
+  input[type=text]{
+    width:100%;
+    background:var(--dark-1);
+    border:1px solid var(--line);
+    color:var(--text-hi);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    padding:13px 14px;
+    border-radius:var(--radius);
+    outline:none;
+  }
+  input[type=text]:focus{ border-color:var(--safelight); }
+  input[type=text]::placeholder{ color:#55555c; }
+
+  /* ---------- viewfinder ---------- */
+  .viewfinder{
+    position:relative;
+    margin-top:22px;
+    aspect-ratio:4/3;
+    background:#000;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .viewfinder video, .viewfinder img.preview{
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+  .corner{
+    position:absolute; width:26px; height:26px;
+    border-color:var(--safelight); border-style:solid; border-width:0;
+    opacity:.9; pointer-events:none;
+  }
+  .corner.tl{ top:12px; left:12px; border-top-width:2px; border-left-width:2px; }
+  .corner.tr{ top:12px; right:12px; border-top-width:2px; border-right-width:2px; }
+  .corner.bl{ bottom:12px; left:12px; border-bottom-width:2px; border-left-width:2px; }
+  .corner.br{ bottom:12px; right:12px; border-bottom-width:2px; border-right-width:2px; }
+
+  .rec-tally{
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:1.5px;
+    background:rgba(0,0,0,.55); padding:5px 10px; border-radius:999px;
+    color:var(--text-hi);
+  }
+  .rec-dot{ width:7px; height:7px; border-radius:50%; background:var(--green-tally); }
+  .rec-dot.off{ background:#555; }
+
+  .vf-empty{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; color:var(--text-lo); text-align:center; padding:20px;
+  }
+  .vf-empty svg{ opacity:.5; }
+  .vf-empty small{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:1px; }
+
+  .flash-overlay{
+    position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none;
+    z-index:50; transition:opacity .08s ease-out;
+  }
+  .flash-overlay.fire{ opacity:1; transition:opacity .05s ease-in; }
+
+  /* ---------- controls row ---------- */
+  .controls{
+    display:flex; align-items:center; justify-content:center;
+    gap:22px; margin-top:24px;
+  }
+  .shutter-btn{
+    width:74px; height:74px; border-radius:50%;
+    background:var(--paper);
+    border:4px solid var(--dark-2);
+    box-shadow:0 0 0 2px var(--safelight);
+    cursor:pointer;
+    position:relative;
+    transition:transform .12s ease;
+  }
+  .shutter-btn:active{ transform:scale(.92); }
+  .shutter-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .file-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text-lo); background:transparent; border:1px solid var(--line);
+    padding:10px 16px; border-radius:var(--radius); cursor:pointer;
+  }
+  .file-btn:hover{ color:var(--text-hi); border-color:var(--text-lo); }
+
+  /* ---------- status line ---------- */
+  .status{
+    margin-top:20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; letter-spacing:1px;
+    color:var(--text-lo);
+    text-align:center;
+    min-height:16px;
+  }
+  .status.developing::after{
+    content:'';
+    display:inline-block;
+    animation:dots 1.2s steps(4,end) infinite;
+  }
+  @keyframes dots{
+    0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';}
+  }
+
+  /* ---------- contact sheet (results) ---------- */
+  .contact-sheet{ margin-top:30px; }
+  .sheet-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:2px;
+    text-transform:uppercase; color:var(--text-lo); margin-bottom:12px;
+    display:flex; justify-content:space-between;
+  }
+  .sheet-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:3px;
+    background:var(--dark-1);
+    border:1px solid var(--line);
+    padding:10px;
+  }
+  .frame{
+    position:relative; aspect-ratio:1/1; overflow:hidden;
+    background:var(--dark-2); border:1px solid #000;
+  }
+  .frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .frame .idx{
+    position:absolute; bottom:4px; left:5px;
+    font-family:'IBM Plex Mono', monospace; font-size:9px; color:#ddd;
+    text-shadow:0 0 3px rgba(0,0,0,.9);
+  }
+  .empty-roll{
+    text-align:center; padding:40px 10px; color:var(--text-lo);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:1px;
+  }
+
+  /* ---------- photographer upload ---------- */
+  .dropzone{
+    margin-top:18px;
+    border:1.5px dashed var(--line);
+    border-radius:var(--radius);
+    padding:36px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone.drag{ border-color:var(--safelight); background:rgba(224,64,44,.06); }
+  .dropzone p{ margin:10px 0 4px; font-size:14px; color:var(--text-hi); }
+  .dropzone small{ font-family:'IBM Plex Mono', monospace; color:var(--text-lo); font-size:11px; letter-spacing:1px; }
+  .file-list{
+    margin-top:14px; display:flex; flex-wrap:wrap; gap:6px;
+  }
+  .file-chip{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px;
+    background:var(--dark-1); border:1px solid var(--line);
+    padding:5px 9px; border-radius:999px; color:var(--text-lo);
+  }
+  .primary-btn{
+    width:100%; margin-top:18px;
+    background:var(--safelight); color:#fff; border:none;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:2px; text-transform:uppercase;
+    padding:15px; border-radius:var(--radius); cursor:pointer;
+    transition:background .15s ease;
+  }
+  .primary-btn:hover{ background:var(--safelight-dim); }
+  .primary-btn:disabled{ background:#3a3a3d; color:var(--text-lo); cursor:not-allowed; }
+
+  .result-card{
+    margin-top:20px; padding:18px; background:var(--dark-1);
+    border:1px solid var(--line); border-left:3px solid var(--green-tally);
+    font-family:'IBM Plex Mono', monospace; font-size:12px; line-height:1.9;
+    color:var(--text-hi); display:none;
+  }
+  .result-card.show{ display:block; }
+  .result-card.err{ border-left-color:var(--safelight); }
+
+  footer{
+    text-align:center; padding:26px 20px 40px;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:1.5px;
+    color:#4a4a50;
+  }
+
+  @media (max-width:420px){
+    .sheet-grid{ grid-template-columns:repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="sprocket-row">
+  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+</div>
+
+<header>
+  <h1 class="logo">CLICK<span>ME</span></h1>
+  <div class="tagline">find yourself in the crowd</div>
+</header>
+
+<div class="toggle-wrap">
+  <div class="toggle">
+    <button id="tabGuest" class="active" onclick="setMode('guest')">I'm a Guest</button>
+    <button id="tabPhotographer" onclick="setMode('photographer')">I'm the Photographer</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ================= GUEST PANEL ================= -->
+  <section id="panelGuest" class="panel active">
+
+    <label class="field-label">Event ID</label>
+    <input type="text" id="guestEventId" placeholder="e.g. event001" />
+
+    <label class="field-label">Your Face</label>
+    <div class="viewfinder" id="viewfinder">
+      <video id="camVideo" autoplay playsinline muted></video>
+      <img id="capturedPreview" class="preview" style="display:none" />
+      <div class="vf-empty" id="vfEmpty">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#8c8c93" stroke-width="1.4"><path d="M3 7h3l2-3h8l2 3h3v13H3z"/><circle cx="12" cy="13" r="4"/></svg>
+        <small>CAMERA NOT STARTED</small>
+      </div>
+      <div class="corner tl"></div><div class="corner tr"></div>
+      <div class="corner bl"></div><div class="corner br"></div>
+      <div class="rec-tally"><span class="rec-dot off" id="recDot"></span><span id="recLabel">STANDBY</span></div>
+    </div>
+
+    <div class="controls">
+      <button class="file-btn" onclick="startCamera()">Start Camera</button>
+      <button class="shutter-btn" id="shutterBtn" onclick="captureAndFind()" disabled title="Capture selfie"></button>
+      <label class="file-btn" for="uploadSelfie" style="cursor:pointer">Upload Instead</label>
+      <input type="file" id="uploadSelfie" accept="image/*" style="display:none" onchange="handleUploadSelfie(event)">
+    </div>
+
+    <div class="status" id="guestStatus"></div>
+
+    <div class="contact-sheet" id="contactSheet" style="display:none">
+      <div class="sheet-label"><span>Contact Sheet</span><span id="frameCount">0 frames</span></div>
+      <div class="sheet-grid" id="sheetGrid"></div>
+    </div>
+
+  </section>
+
+  <!-- ================= PHOTOGRAPHER PANEL ================= -->
+  <section id="panelPhotographer" class="panel">
+
+    <label class="field-label">Event ID</label>
+    <input type="text" id="photoEventId" placeholder="e.g. event001" />
+
+    <label class="field-label">Event Photos</label>
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('bulkFiles').click()">
+      <p>Drop the full event roll here</p>
+      <small>OR CLICK TO BROWSE · JPG / PNG</small>
+    </div>
+    <input type="file" id="bulkFiles" accept="image/*" multiple style="display:none">
+    <div class="file-list" id="fileList"></div>
+
+    <button class="primary-btn" id="uploadBtn" onclick="uploadEventPhotos()">Develop &amp; Upload Roll</button>
+
+    <div class="status" id="photoStatus"></div>
+    <div class="result-card" id="photoResult"></div>
+
+  </section>
+
+</main>
+
+<div class="sprocket-row">
+  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+</div>
+
+<footer>CLICKME · AI-POWERED EVENT MEDIA DELIVERY</footer>
+
+<script>
+const API_BASE = window.location.protocol.startsWith('http') ? window.location.origin : "http://127.0.0.1:8000";
+
+
+/* ---------------- mode switching ---------------- */
+function setMode(mode){
+  document.getElementById('tabGuest').classList.toggle('active', mode==='guest');
+  document.getElementById('tabPhotographer').classList.toggle('active', mode==='photographer');
+  document.getElementById('panelGuest').classList.toggle('active', mode==='guest');
+  document.getElementById('panelPhotographer').classList.toggle('active', mode==='photographer');
+}
+
+/* ---------------- camera ---------------- */
+let stream = null;
+let capturedBlob = null;
+
+async function startCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    const video = document.getElementById('camVideo');
+    video.srcObject = stream;
+    video.style.display = 'block';
+    document.getElementById('capturedPreview').style.display = 'none';
+    document.getElementById('vfEmpty').style.display = 'none';
+    document.getElementById('recDot').classList.remove('off');
+    document.getElementById('recLabel').textContent = 'LIVE';
+    document.getElementById('shutterBtn').disabled = false;
+  }catch(err){
+    setGuestStatus('Camera access denied — use "Upload Instead" below.');
+  }
+}
+
+function fireFlash(){
+  const overlay = document.getElementById('flashOverlay');
+  overlay.classList.add('fire');
+  setTimeout(()=> overlay.classList.remove('fire'), 90);
+}
+
+function captureAndFind(){
+  const video = document.getElementById('camVideo');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  fireFlash();
+
+  canvas.toBlob(async (blob)=>{
+    capturedBlob = blob;
+    const url = URL.createObjectURL(blob);
+    document.getElementById('capturedPreview').src = url;
+    document.getElementById('capturedPreview').style.display = 'block';
+    video.style.display = 'none';
+    document.getElementById('recLabel').textContent = 'CAPTURED';
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); }
+    await sendSelfie(blob, 'selfie.jpg');
+  }, 'image/jpeg', 0.92);
+}
+
+function handleUploadSelfie(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  document.getElementById('capturedPreview').src = url;
+  document.getElementById('capturedPreview').style.display = 'block';
+  document.getElementById('camVideo').style.display = 'none';
+  document.getElementById('vfEmpty').style.display = 'none';
+  document.getElementById('recLabel').textContent = 'UPLOADED';
+  document.getElementById('recDot').classList.remove('off');
+  sendSelfie(file, file.name);
+}
+
+function setGuestStatus(msg, developing=false){
+  const el = document.getElementById('guestStatus');
+  el.textContent = msg;
+  el.classList.toggle('developing', developing);
+}
+
+function compressImage(fileOrBlob, fileName = 'image.jpg', maxDim = 1280, quality = 0.82) {
+  return new Promise((resolve) => {
+    if (!(fileOrBlob instanceof Blob)) {
+      resolve(fileOrBlob);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(fileOrBlob);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width;
+      let h = img.height;
+      if (Math.max(w, h) > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const name = fileOrBlob.name || fileName;
+            resolve(new File([blob], name, { type: 'image/jpeg' }));
+          } else {
+            resolve(fileOrBlob);
+          }
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(fileOrBlob);
+    };
+    img.src = url;
+  });
+}
+
+async function sendSelfie(fileOrBlob, filename){
+  const eventId = document.getElementById('guestEventId').value.trim();
+  if(!eventId){
+    setGuestStatus('Enter an Event ID first.');
+    return;
+  }
+  setGuestStatus('Developing', true);
+  document.getElementById('contactSheet').style.display = 'none';
+
+  const readyFile = await compressImage(fileOrBlob, filename);
+
+  const form = new FormData();
+  form.append('event_id', eventId);
+  form.append('selfie', readyFile, readyFile.name || filename);
+  form.append('threshold', 0.85);
+
+  try{
+    const res = await fetch(`${API_BASE}/find-my-photos`, { method:'POST', body: form });
+    if(!res.ok){
+      const text = await res.text();
+      setGuestStatus(`Server returned status ${res.status}: ${text.slice(0, 100)}`);
+      return;
+    }
+    const data = await res.json();
+
+    if(data.status !== 'success'){
+      setGuestStatus(data.message || 'No face detected — try another shot.');
+      return;
+    }
+    renderContactSheet(data.matched_photos);
+    setGuestStatus(data.matched_photos.length ? `${data.matched_photos.length} photo(s) found.` : 'No matches in this roll yet.');
+  }catch(err){
+    console.error("Selfie error:", err);
+    setGuestStatus(`Connection error: ${err.message || 'Could not connect'}`);
+  }
+}
+
+function renderContactSheet(filenames){
+  const sheet = document.getElementById('contactSheet');
+  const grid = document.getElementById('sheetGrid');
+  const count = document.getElementById('frameCount');
+  grid.innerHTML = '';
+  count.textContent = `${filenames.length} frame${filenames.length!==1?'s':''}`;
+
+  if(filenames.length === 0){
+    grid.innerHTML = '<div class="empty-roll" style="grid-column:1/-1">NO FRAMES MATCHED</div>';
+  } else {
+    filenames.forEach((name, i)=>{
+      const frame = document.createElement('div');
+      frame.className = 'frame';
+      frame.innerHTML = `<img src="${API_BASE}/uploads/${encodeURIComponent(name)}" alt="${name}" onerror="this.parentElement.style.background='#2a2a2d'"><span class="idx">${String(i+1).padStart(2,'0')}</span>`;
+      grid.appendChild(frame);
+    });
+  }
+  sheet.style.display = 'block';
+}
+
+/* ---------------- photographer upload ---------------- */
+let selectedFiles = [];
+const dropzone = document.getElementById('dropzone');
+const bulkInput = document.getElementById('bulkFiles');
+
+dropzone.addEventListener('dragover', e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  addFiles(e.dataTransfer.files);
+});
+bulkInput.addEventListener('change', ()=> addFiles(bulkInput.files));
+
+function addFiles(fileListObj){
+  selectedFiles = selectedFiles.concat(Array.from(fileListObj));
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  selectedFiles.forEach(f=>{
+    const chip = document.createElement('span');
+    chip.className = 'file-chip';
+    chip.textContent = f.name;
+    list.appendChild(chip);
+  });
+}
+
+function setPhotoStatus(msg, developing=false){
+  const el = document.getElementById('photoStatus');
+  el.textContent = msg;
+  el.classList.toggle('developing', developing);
+}
+
+async function uploadEventPhotos(){
+  const eventId = document.getElementById('photoEventId').value.trim();
+  const resultCard = document.getElementById('photoResult');
+  resultCard.classList.remove('show','err');
+
+  if(!eventId){ setPhotoStatus('Enter an Event ID first.'); return; }
+  if(selectedFiles.length === 0){ setPhotoStatus('Add at least one photo.'); return; }
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+
+  let totalProcessed = 0;
+  let totalFiles = selectedFiles.length;
+
+  for(let i = 0; i < selectedFiles.length; i++){
+    const file = selectedFiles[i];
+    setPhotoStatus(`Developing ${i+1} of ${totalFiles}: ${file.name}`, true);
+
+    const readyFile = await compressImage(file, file.name);
+
+    const form = new FormData();
+    form.append('event_id', eventId);
+    form.append('files', readyFile, readyFile.name || file.name);
+
+    try{
+      const res = await fetch(`${API_BASE}/upload-event-photos`, { method:'POST', body: form });
+      if(!res.ok){
+        throw new Error(`Server returned status ${res.status}`);
+      }
+      const data = await res.json();
+      if(data.status === 'success'){
+        totalProcessed += (data.faces_processed || 0);
+      } else {
+        throw new Error(data.message || 'Upload failed');
+      }
+    } catch(err){
+      console.error(err);
+      setPhotoStatus('');
+      resultCard.classList.add('show','err');
+      resultCard.innerHTML = `Error uploading ${file.name}: ${err.message || 'Network error'}`;
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  setPhotoStatus('');
+  resultCard.classList.add('show');
+  resultCard.innerHTML = `ROLL DEVELOPED<br>${totalFiles} file(s) uploaded &middot; ${totalProcessed} face(s) indexed for event "${eventId}"`;
+  btn.disabled = false;
+}
+
+</script>
+
+</body>
+</html>

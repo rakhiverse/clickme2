@@ -5,7 +5,6 @@ from fastapi.responses import HTMLResponse
 import shutil
 import os
 import chromadb
-from gradio_client import file
 from face_utils import get_face_embeddings
 
 os.environ["ANONYMIZED_TELEMETRY"] = "False"

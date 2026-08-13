@@ -1326,8 +1326,8 @@
           }
 
           const matches = Array.isArray(data.matched_photos)
-            ? data.matched_photos
-            : [];
+  ? [...new Set(data.matched_photos)]
+  : [];
 
           renderContactSheet(matches);
 
@@ -1374,7 +1374,7 @@
 
             const image = document.createElement("img");
 
-            image.src = `${API_BASE}/uploads/${encodeURIComponent(filename)}`;
+            image.src = `${API_BASE}/photo/${encodeURIComponent(filename)}`;
 
             image.alt = filename;
 

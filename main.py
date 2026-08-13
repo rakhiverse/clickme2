@@ -22,10 +22,7 @@ from fastapi import (
     Form,
 )
 
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import HTMLResponse, FileResponse
 from face_utils import get_face_embeddings
 
 
@@ -69,30 +66,32 @@ os.makedirs(
 
 
 # ============================================================
-# STATIC UPLOADS
+# CONTROLLED PHOTO ACCESS
 # ============================================================
 
-app.mount(
-    "/uploads",
-    StaticFiles(
-        directory=UPLOAD_DIR
-    ),
-    name="uploads"
-)
+@app.get("/photo/{filename}")
+def get_photo(filename: str):
 
+    filename = safe_filename(filename)
 
-# ============================================================
-# CORS
-# ============================================================
+    if not filename:
+        return {
+            "status": "error",
+            "message": "Invalid filename."
+        }
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
+    file_path = os.path.join(
+        UPLOAD_DIR,
+        filename
+    )
 
+    if not os.path.isfile(file_path):
+        return {
+            "status": "error",
+            "message": "Photo not found."
+        }
+
+    return FileResponse(file_path)
 
 # ============================================================
 # CHROMADB
@@ -920,32 +919,40 @@ def health():
 # DEBUG STATUS
 # ============================================================
 
-@app.get(
-    "/debug/status"
+DEBUG_STATUS_ENABLED = (
+    os.environ.get(
+        "DEBUG_STATUS_ENABLED",
+        "false"
+    ).lower()
+    == "true"
 )
-def debug_status():
 
-    try:
+if DEBUG_STATUS_ENABLED:
 
-        collection = get_collection()
+    @app.get(
+        "/debug/status"
+    )
+    def debug_status():
 
-        count = collection.count()
+        try:
 
-        return {
-            "status": "ok",
-            "database": "connected",
-            "embeddings": count
-        }
+            collection = get_collection()
 
-    except Exception as e:
+            count = collection.count()
 
-        return {
-            "status": "error",
-            "database": "error",
-            "message": repr(e)
-        }
+            return {
+                "status": "ok",
+                "database": "connected",
+                "embeddings": count
+            }
 
+        except Exception as e:
 
+            return {
+                "status": "error",
+                "database": "error",
+                "message": repr(e)
+            }
 # ============================================================
 # START SERVER
 # ============================================================

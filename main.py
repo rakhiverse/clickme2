@@ -20,7 +20,6 @@ from fastapi import (
     UploadFile,
     File,
     Form,
-    BackgroundTasks
 )
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +34,8 @@ from face_utils import get_face_embeddings
 # ============================================================
 
 app = FastAPI(
-    title="ClickMe API"
+    title="ClickMe API",
+    version="1.0.0"
 )
 
 
@@ -145,7 +145,7 @@ def safe_filename(filename: str):
 
 
 # ============================================================
-# BACKGROUND FACE PROCESSING
+# PROCESS ONE PHOTO
 # ============================================================
 
 def process_photo_faces(
@@ -154,37 +154,68 @@ def process_photo_faces(
     filename: str
 ):
 
+    """
+    Detect faces and immediately store embeddings
+    in ChromaDB.
+
+    Returns:
+        faces_count, success, error_message
+    """
+
     try:
 
         print(
-            f"[BACKGROUND] Processing: "
-            f"{filename} | "
-            f"event={event_id}"
+            f"[FACE] Processing: "
+            f"{filename} | event={event_id}"
         )
+
+        # ----------------------------------------------------
+        # FACE DETECTION
+        # ----------------------------------------------------
 
         faces = get_face_embeddings(
             save_path
         )
 
+        face_count = len(
+            faces or []
+        )
+
+        print(
+            f"[FACE] Processed: "
+            f"{filename} | "
+            f"Faces={face_count}"
+        )
+
         if not faces:
 
-            print(
-                f"[BACKGROUND] "
-                f"No face detected: "
-                f"{filename}"
-            )
+            return 0, True, None
 
-            return
+        # ----------------------------------------------------
+        # CHROMA
+        # ----------------------------------------------------
 
         collection = get_collection()
+
+        added = 0
 
         for index, face in enumerate(
             faces
         ):
 
-            embedding = face[
+            embedding = face.get(
                 "embedding"
-            ]
+            )
+
+            if embedding is None:
+                continue
+
+            # Convert numpy array safely
+            if hasattr(
+                embedding,
+                "tolist"
+            ):
+                embedding = embedding.tolist()
 
             doc_id = (
                 f"{event_id}_"
@@ -196,7 +227,7 @@ def process_photo_faces(
                 ids=[doc_id],
 
                 embeddings=[
-                    embedding.tolist()
+                    embedding
                 ],
 
                 metadatas=[
@@ -207,18 +238,25 @@ def process_photo_faces(
                 ]
             )
 
+            added += 1
+
         print(
-            f"[BACKGROUND] Successfully "
-            f"indexed {len(faces)} face(s): "
+            f"[CHROMA] Indexed "
+            f"{added} face(s): "
             f"{filename}"
         )
+
+        return added, True, None
 
     except Exception as e:
 
         print(
-            f"[BACKGROUND ERROR] "
-            f"{filename}: {repr(e)}"
+            f"[FACE ERROR] "
+            f"{filename}: "
+            f"{repr(e)}"
         )
+
+        return 0, False, repr(e)
 
 
 # ============================================================
@@ -229,8 +267,6 @@ def process_photo_faces(
     "/upload-event-photos"
 )
 async def upload_event_photos(
-
-    background_tasks: BackgroundTasks,
 
     event_id: str = Form(...),
 
@@ -248,18 +284,38 @@ async def upload_event_photos(
             "message": "Event ID is required."
         }
 
-    uploaded_count = 0
-    scheduled_count = 0
+    if not files:
+
+        return {
+            "status": "error",
+            "message": "No photos received."
+        }
+
+    # --------------------------------------------------------
+    # COUNTERS
+    # --------------------------------------------------------
+
+    files_uploaded = 0
+
+    faces_processed = 0
+
+    files_without_faces = 0
+
+    failed_files = 0
+
+    failed_details = []
+
+    # --------------------------------------------------------
+    # PROCESS EACH PHOTO
+    # --------------------------------------------------------
 
     for file in files:
 
         if not file.filename:
             continue
 
-        original_filename = (
-            safe_filename(
-                file.filename
-            )
+        original_filename = safe_filename(
+            file.filename
         )
 
         if not original_filename:
@@ -277,6 +333,10 @@ async def upload_event_photos(
                 f"{original_filename}"
             )
 
+            # ------------------------------------------------
+            # SAVE FILE
+            # ------------------------------------------------
+
             with open(
                 save_path,
                 "wb"
@@ -287,42 +347,149 @@ async def upload_event_photos(
                     output_file
                 )
 
-            uploaded_count += 1
+            files_uploaded += 1
 
-            # Schedule processing after
-            # HTTP response work.
-            background_tasks.add_task(
-                process_photo_faces,
-                save_path,
-                event_id,
-                original_filename
+            # ------------------------------------------------
+            # PROCESS FACE IMMEDIATELY
+            #
+            # IMPORTANT:
+            # Do NOT use BackgroundTasks here.
+            #
+            # We need the result before returning
+            # the HTTP response.
+            # ------------------------------------------------
+
+            face_count, success, error = (
+                process_photo_faces(
+                    save_path,
+                    event_id,
+                    original_filename
+                )
             )
 
-            scheduled_count += 1
+            if not success:
 
-            print(
-                f"[UPLOAD] Background task "
-                f"scheduled: "
-                f"{original_filename}"
-            )
+                failed_files += 1
+
+                failed_details.append(
+                    {
+                        "filename": original_filename,
+                        "error": error
+                    }
+                )
+
+                continue
+
+            if face_count == 0:
+
+                files_without_faces += 1
+
+            else:
+
+                faces_processed += face_count
 
         except Exception as e:
+
+            failed_files += 1
+
+            error_text = repr(e)
+
+            failed_details.append(
+                {
+                    "filename": original_filename,
+                    "error": error_text
+                }
+            )
 
             print(
                 f"[UPLOAD ERROR] "
                 f"{original_filename}: "
-                f"{repr(e)}"
+                f"{error_text}"
             )
+
+    # --------------------------------------------------------
+    # FINAL DATABASE COUNT
+    # --------------------------------------------------------
+
+    try:
+
+        collection = get_collection()
+
+        total_embeddings = (
+            collection.count()
+        )
+
+    except Exception:
+
+        total_embeddings = 0
+
+    print(
+        "================================================"
+    )
+
+    print(
+        "[ROLL COMPLETE]"
+    )
+
+    print(
+        f"Event: {event_id}"
+    )
+
+    print(
+        f"Files uploaded: {files_uploaded}"
+    )
+
+    print(
+        f"Faces indexed: {faces_processed}"
+    )
+
+    print(
+        f"Files without faces: "
+        f"{files_without_faces}"
+    )
+
+    print(
+        f"Failed files: {failed_files}"
+    )
+
+    print(
+        f"Total embeddings: "
+        f"{total_embeddings}"
+    )
+
+    print(
+        "================================================"
+    )
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
 
     return {
         "status": "success",
-        "files_count": uploaded_count,
-        "faces_processed": 0,
-        "tasks_scheduled": scheduled_count,
+
+        "event_id": event_id,
+
+        "files_uploaded": files_uploaded,
+
+        "faces_processed": faces_processed,
+
+        "files_without_faces": (
+            files_without_faces
+        ),
+
+        "failed_files": failed_files,
+
+        "failed_details": failed_details,
+
+        "total_embeddings": (
+            total_embeddings
+        ),
+
         "message": (
-            "Roll received. "
-            "Photos are being processed "
-            "in background."
+            "Roll developed successfully. "
+            "Faces are indexed and ready "
+            "for search."
         )
     }
 
@@ -365,6 +532,13 @@ async def find_my_photos(
         selfie.filename
     )
 
+    if not selfie_filename:
+
+        return {
+            "status": "error",
+            "message": "Invalid selfie filename."
+        }
+
     selfie_name = (
         f"selfie_"
         f"{uuid.uuid4().hex}_"
@@ -379,7 +553,7 @@ async def find_my_photos(
     try:
 
         # ----------------------------------------------------
-        # Save selfie
+        # SAVE SELFIE
         # ----------------------------------------------------
 
         with open(
@@ -398,7 +572,7 @@ async def find_my_photos(
         )
 
         # ----------------------------------------------------
-        # Detect guest face
+        # DETECT GUEST FACE
         # ----------------------------------------------------
 
         guest_faces = get_face_embeddings(
@@ -417,13 +591,30 @@ async def find_my_photos(
             }
 
         guest_embedding = (
-            guest_faces[0][
-                "embedding"
-            ]
-        ).tolist()
+            guest_faces[0]
+            .get("embedding")
+        )
+
+        if guest_embedding is None:
+
+            return {
+                "status": "error",
+                "message": (
+                    "Could not generate "
+                    "face embedding."
+                )
+            }
+
+        if hasattr(
+            guest_embedding,
+            "tolist"
+        ):
+            guest_embedding = (
+                guest_embedding.tolist()
+            )
 
         # ----------------------------------------------------
-        # Validate threshold
+        # THRESHOLD
         # ----------------------------------------------------
 
         try:
@@ -437,13 +628,20 @@ async def find_my_photos(
             threshold = 0.85
 
         if threshold <= 0:
+
             threshold = 0.85
 
         if threshold > 2:
+
             threshold = 0.85
 
+        print(
+            f"[SEARCH] Event={event_id} "
+            f"Threshold={threshold}"
+        )
+
         # ----------------------------------------------------
-        # ChromaDB
+        # CHROMADB
         # ----------------------------------------------------
 
         collection = get_collection()
@@ -459,34 +657,65 @@ async def find_my_photos(
 
             return {
                 "status": "success",
+
                 "matched_photos": [],
+
                 "message": (
-                    "No processed event "
-                    "photos found yet."
+                    "No event photos "
+                    "have been indexed yet."
                 )
             }
 
         # ----------------------------------------------------
-        # Search
+        # SEARCH
         # ----------------------------------------------------
+
+        # Chroma requires n_results to be
+        # no larger than available records.
 
         n_results = min(
             50,
             total
         )
 
-        results = collection.query(
+        try:
 
-            query_embeddings=[
-                guest_embedding
-            ],
+            results = collection.query(
 
-            n_results=n_results,
+                query_embeddings=[
+                    guest_embedding
+                ],
 
-            where={
-                "event_id": event_id
+                n_results=n_results,
+
+                where={
+                    "event_id": event_id
+                },
+
+                include=[
+                    "metadatas",
+                    "distances"
+                ]
+            )
+
+        except Exception as e:
+
+            print(
+                f"[SEARCH QUERY ERROR] "
+                f"{repr(e)}"
+            )
+
+            return {
+                "status": "error",
+                "message": (
+                    "Face database search "
+                    "failed."
+                )
             }
-        )
+
+        # ----------------------------------------------------
+        # READ RESULTS
+        # ----------------------------------------------------
 
         matched = set()
 
@@ -496,32 +725,28 @@ async def find_my_photos(
 
         if (
             results
-            and results.get(
-                "metadatas"
-            )
+            and results.get("metadatas")
         ):
 
-            metadatas = (
-                results[
-                    "metadatas"
-                ][0]
-            )
+            if results["metadatas"][0]:
+
+                metadatas = (
+                    results["metadatas"][0]
+                )
 
         if (
             results
-            and results.get(
-                "distances"
-            )
+            and results.get("distances")
         ):
 
-            distances = (
-                results[
-                    "distances"
-                ][0]
-            )
+            if results["distances"][0]:
+
+                distances = (
+                    results["distances"][0]
+                )
 
         # ----------------------------------------------------
-        # Match faces
+        # MATCH FACES
         # ----------------------------------------------------
 
         for metadata, distance in zip(
@@ -535,38 +760,53 @@ async def find_my_photos(
             if distance is None:
                 continue
 
+            filename = metadata.get(
+                "filename"
+            )
+
             print(
                 f"[SEARCH] "
-                f"{metadata.get('filename')} "
+                f"{filename} "
                 f"distance={distance:.4f}"
             )
 
-            if distance < threshold:
-
-                filename = metadata.get(
-                    "filename"
-                )
+            if distance <= threshold:
 
                 if filename:
+
                     matched.add(
                         filename
                     )
 
-        matched_photos = list(
-            matched
+        matched_photos = sorted(
+            list(matched)
         )
 
         print(
             f"[SEARCH] "
             f"Event={event_id} | "
-            f"Matches={len(matched_photos)}"
+            f"Matches="
+            f"{len(matched_photos)}"
         )
+
+        # ----------------------------------------------------
+        # RESPONSE
+        # ----------------------------------------------------
 
         return {
             "status": "success",
+
+            "event_id": event_id,
+
             "matched_photos": (
                 matched_photos
-            )
+            ),
+
+            "count": len(
+                matched_photos
+            ),
+
+            "threshold": threshold
         }
 
     except Exception as e:
@@ -583,6 +823,29 @@ async def find_my_photos(
                 "Please try again."
             )
         }
+
+    finally:
+
+        # ----------------------------------------------------
+        # DELETE SELFIE AFTER PROCESSING
+        # ----------------------------------------------------
+
+        try:
+
+            if os.path.exists(
+                selfie_path
+            ):
+
+                os.remove(
+                    selfie_path
+                )
+
+        except Exception as e:
+
+            print(
+                f"[SELFIE CLEANUP ERROR] "
+                f"{repr(e)}"
+            )
 
 
 # ============================================================
@@ -618,7 +881,8 @@ def root():
             content=(
                 "<h1>ClickMe</h1>"
                 "<p>Frontend file could not "
-                f"be loaded: {e}</p>"
+                "be loaded: "
+                f"{e}</p>"
             ),
             status_code=500
         )
@@ -633,9 +897,23 @@ def root():
 )
 def health():
 
-    return {
-        "status": "ok"
-    }
+    try:
+
+        collection = get_collection()
+
+        return {
+            "status": "ok",
+            "database": "connected",
+            "embeddings": collection.count()
+        }
+
+    except Exception as e:
+
+        return {
+            "status": "error",
+            "database": "error",
+            "message": repr(e)
+        }
 
 
 # ============================================================

@@ -22,7 +22,6 @@ from fastapi import (
     Form,
 )
 
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from face_utils import get_face_embeddings
 
@@ -93,19 +92,6 @@ def get_photo(filename: str):
         }
 
     return FileResponse(file_path)
-
-# ============================================================
-# CORS
-# ============================================================
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"]
-)
-
 
 # ============================================================
 # CHROMADB

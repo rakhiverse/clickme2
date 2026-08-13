@@ -1326,8 +1326,8 @@
           }
 
           const matches = Array.isArray(data.matched_photos)
-            ? data.matched_photos
-            : [];
+  ? [...new Set(data.matched_photos)]
+  : [];
 
           renderContactSheet(matches);
 

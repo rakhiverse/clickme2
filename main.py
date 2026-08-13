@@ -216,14 +216,20 @@ def process_photo_faces(
             ):
                 embedding = embedding.tolist()
 
+            # Stable ID:
+            # same event + same filename + same face
+            # will update the existing record instead
+            # of creating a duplicate.
             doc_id = (
                 f"{event_id}_"
-                f"{uuid.uuid4().hex}_"
+                f"{filename}_"
                 f"{index}"
             )
 
-            collection.add(
-                ids=[doc_id],
+            collection.upsert(
+                ids=[
+                    doc_id
+                ],
 
                 embeddings=[
                     embedding
@@ -240,7 +246,7 @@ def process_photo_faces(
             added += 1
 
         print(
-            f"[CHROMA] Indexed "
+            f"[CHROMA] Indexed/updated "
             f"{added} face(s): "
             f"{filename}"
         )

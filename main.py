@@ -23,9 +23,7 @@ from fastapi import (
 )
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-
+from fastapi.responses import HTMLResponse, FileResponse
 from face_utils import get_face_embeddings
 
 
@@ -69,17 +67,32 @@ os.makedirs(
 
 
 # ============================================================
-# STATIC UPLOADS
+# CONTROLLED PHOTO ACCESS
 # ============================================================
 
-app.mount(
-    "/uploads",
-    StaticFiles(
-        directory=UPLOAD_DIR
-    ),
-    name="uploads"
-)
+@app.get("/photo/{filename}")
+def get_photo(filename: str):
 
+    filename = safe_filename(filename)
+
+    if not filename:
+        return {
+            "status": "error",
+            "message": "Invalid filename."
+        }
+
+    file_path = os.path.join(
+        UPLOAD_DIR,
+        filename
+    )
+
+    if not os.path.isfile(file_path):
+        return {
+            "status": "error",
+            "message": "Photo not found."
+        }
+
+    return FileResponse(file_path)
 
 # ============================================================
 # CORS

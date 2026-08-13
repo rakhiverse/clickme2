@@ -4,28 +4,34 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV ANONYMIZED_TELEMETRY=False
 
-# Install system dependencies required for OpenCV
+# OpenCV / InsightFace dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
+    libxrender1 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Install Python dependencies first for Docker cache
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application
 COPY . .
 
-RUN mkdir -p uploads clickme_db && chmod -R 777 uploads clickme_db /app
+# Create required directories
+RUN mkdir -p /app/uploads /app/clickme_db
 
-# Pre-download detection and recognition modules during build
-RUN python -c "import insightface; app = insightface.app.FaceAnalysis(name='buffalo_l', allowed_modules=['detection', 'recognition']); app.prepare(ctx_id=-1, det_size=(640, 640))" || true
+# Render runs as a non-root user
+RUN useradd -m appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 10000
 

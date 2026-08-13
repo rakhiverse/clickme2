@@ -1,13 +1,26 @@
 import os
 
 # ============================================================
-# LOW MEMORY / LOW CPU SETTINGS
+# RENDER FREE / LOW MEMORY SETTINGS
+# IMPORTANT: set these BEFORE importing numpy / cv2 / insightface
 # ============================================================
 
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+# ONNX Runtime CPU thread control
+os.environ["ORT_INTRA_OP_NUM_THREADS"] = "1"
+os.environ["ORT_INTER_OP_NUM_THREADS"] = "1"
+
+# Disable unnecessary ONNX logging
+os.environ["ORT_LOGGING_LEVEL"] = "3"
+
+# No GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+import gc
 
 import cv2
 import numpy as np
@@ -22,7 +35,7 @@ app = None
 
 
 # ============================================================
-# LOAD INSIGHTFACE MODEL
+# LOAD INSIGHTFACE
 # ============================================================
 
 def get_app():
@@ -34,35 +47,38 @@ def get_app():
     print("[FACE] Loading InsightFace buffalo_s model...")
 
     try:
+        # Only the two modules actually needed by ClickMe
         app = insightface.app.FaceAnalysis(
             name="buffalo_s",
             allowed_modules=[
                 "detection",
-                "recognition"
-            ]
+                "recognition",
+            ],
         )
 
-        # CPU only.
-        # 320x320 keeps RAM and CPU usage lower.
+        # CPU only
+        #
+        # 256x256 instead of 320x320:
+        # lower RAM / CPU usage on Render Free.
         app.prepare(
             ctx_id=-1,
-            det_size=(320, 320)
+            det_size=(256, 256),
         )
 
-        print(
-            "[FACE] InsightFace buffalo_s "
-            "loaded successfully."
-        )
+        print("[FACE] InsightFace buffalo_s loaded successfully.")
 
         return app
 
     except Exception as e:
+        print(
+            "[FACE ERROR] Could not load InsightFace: "
+            f"{repr(e)}"
+        )
+
         app = None
 
-        print(
-            "[FACE ERROR] Could not load "
-            f"InsightFace: {repr(e)}"
-        )
+        # Release anything partially allocated
+        gc.collect()
 
         raise
 
@@ -72,16 +88,15 @@ def get_app():
 # ============================================================
 
 def load_image(image_path: str):
-
     try:
         img = cv2.imread(
             image_path,
-            cv2.IMREAD_COLOR
+            cv2.IMREAD_COLOR,
         )
 
         if img is None:
             print(
-                f"[FACE] Image could not be loaded: "
+                "[FACE] Image could not be loaded: "
                 f"{image_path}"
             )
             return None
@@ -90,53 +105,55 @@ def load_image(image_path: str):
 
     except Exception as e:
         print(
-            f"[FACE] Image loading error: "
+            "[FACE] Image loading error: "
             f"{repr(e)}"
         )
         return None
 
 
 # ============================================================
-# RESIZE LARGE IMAGE
+# RESIZE IMAGE
 # ============================================================
 
 def resize_image(img):
+    """
+    Resize large images to reduce RAM and CPU usage.
+
+    Maximum dimension:
+        1000 px
+    """
 
     try:
         height, width = img.shape[:2]
 
-        max_dimension = max(
-            height,
-            width
-        )
+        max_dimension = max(height, width)
 
-        # Keep already-small images unchanged.
-        if max_dimension <= 1200:
+        if max_dimension <= 1000:
             return img
 
-        scale = 1200.0 / float(max_dimension)
+        scale = 1000.0 / float(max_dimension)
 
         new_width = max(
             1,
-            int(width * scale)
+            int(width * scale),
         )
 
         new_height = max(
             1,
-            int(height * scale)
+            int(height * scale),
         )
 
         resized = cv2.resize(
             img,
             (
                 new_width,
-                new_height
+                new_height,
             ),
-            interpolation=cv2.INTER_AREA
+            interpolation=cv2.INTER_AREA,
         )
 
         print(
-            f"[FACE] Image resized: "
+            "[FACE] Image resized: "
             f"{width}x{height} -> "
             f"{new_width}x{new_height}"
         )
@@ -145,7 +162,7 @@ def resize_image(img):
 
     except Exception as e:
         print(
-            f"[FACE] Resize error: "
+            "[FACE] Resize error: "
             f"{repr(e)}"
         )
 
@@ -157,30 +174,26 @@ def resize_image(img):
 # ============================================================
 
 def get_face_embeddings(image_path: str):
+    img = None
 
     try:
-
         # ----------------------------------------------------
         # Load image
         # ----------------------------------------------------
 
-        img = load_image(
-            image_path
-        )
+        img = load_image(image_path)
 
         if img is None:
             return []
 
         # ----------------------------------------------------
-        # Resize image
+        # Resize large image
         # ----------------------------------------------------
 
-        img = resize_image(
-            img
-        )
+        img = resize_image(img)
 
         # ----------------------------------------------------
-        # Load InsightFace
+        # Load face model
         # ----------------------------------------------------
 
         face_app = get_app()
@@ -189,15 +202,14 @@ def get_face_embeddings(image_path: str):
         # Detect faces
         # ----------------------------------------------------
 
-        faces = face_app.get(
-            img
-        )
+        faces = face_app.get(img)
 
         if not faces:
             print(
-                f"[FACE] No face detected: "
+                "[FACE] No face detected: "
                 f"{image_path}"
             )
+
             return []
 
         results = []
@@ -211,47 +223,50 @@ def get_face_embeddings(image_path: str):
             embedding = getattr(
                 face,
                 "embedding",
-                None
+                None,
             )
 
             if embedding is None:
                 continue
 
+            # Convert to float32
             embedding = np.asarray(
                 embedding,
-                dtype=np.float32
+                dtype=np.float32,
             )
 
-            # ------------------------------------------------
             # Normalize embedding
-            # ------------------------------------------------
-
-            norm = np.linalg.norm(
-                embedding
-            )
+            norm = np.linalg.norm(embedding)
 
             if norm <= 0:
                 continue
 
-            embedding = (
-                embedding / norm
-            )
+            embedding = embedding / norm
 
             bbox = getattr(
                 face,
                 "bbox",
-                None
+                None,
             )
+
+            # Convert bbox to normal Python list.
+            # This avoids keeping unnecessary InsightFace
+            # objects alive.
+            if bbox is not None:
+                bbox = np.asarray(
+                    bbox,
+                    dtype=np.float32,
+                ).tolist()
 
             results.append(
                 {
                     "bbox": bbox,
-                    "embedding": embedding
+                    "embedding": embedding,
                 }
             )
 
         print(
-            f"[FACE] Processed: "
+            "[FACE] Processed: "
             f"{image_path} | "
             f"Faces={len(results)}"
         )
@@ -259,40 +274,41 @@ def get_face_embeddings(image_path: str):
         return results
 
     except Exception as e:
-
         print(
-            f"[FACE ERROR] "
+            "[FACE ERROR] "
             f"{image_path}: "
             f"{repr(e)}"
         )
 
         return []
 
+    finally:
+        # Release image memory after every photo.
+        img = None
+        gc.collect()
+
 
 # ============================================================
-# LOCAL TEST
+# SIMPLE TEST
 # ============================================================
 
 if __name__ == "__main__":
 
     test_image = "test.jpg"
 
-    print(
-        "========================================"
-    )
+    print("========================================")
+    print("ClickMe Face Recognition Test")
+    print("========================================")
 
-    print(
-        "ClickMe Face Recognition Test"
-    )
+    try:
+        faces = get_face_embeddings(test_image)
 
-    print(
-        "========================================"
-    )
+        print(
+            f"Detected faces: {len(faces)}"
+        )
 
-    faces = get_face_embeddings(
-        test_image
-    )
-
-    print(
-        f"Detected faces: {len(faces)}"
-    )
+    except Exception as e:
+        print(
+            "[TEST ERROR]",
+            repr(e),
+        )

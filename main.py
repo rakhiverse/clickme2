@@ -933,32 +933,40 @@ def health():
 # DEBUG STATUS
 # ============================================================
 
-@app.get(
-    "/debug/status"
+DEBUG_STATUS_ENABLED = (
+    os.environ.get(
+        "DEBUG_STATUS_ENABLED",
+        "false"
+    ).lower()
+    == "true"
 )
-def debug_status():
 
-    try:
+if DEBUG_STATUS_ENABLED:
 
-        collection = get_collection()
+    @app.get(
+        "/debug/status"
+    )
+    def debug_status():
 
-        count = collection.count()
+        try:
 
-        return {
-            "status": "ok",
-            "database": "connected",
-            "embeddings": count
-        }
+            collection = get_collection()
 
-    except Exception as e:
+            count = collection.count()
 
-        return {
-            "status": "error",
-            "database": "error",
-            "message": repr(e)
-        }
+            return {
+                "status": "ok",
+                "database": "connected",
+                "embeddings": count
+            }
 
+        except Exception as e:
 
+            return {
+                "status": "error",
+                "database": "error",
+                "message": repr(e)
+            }
 # ============================================================
 # START SERVER
 # ============================================================

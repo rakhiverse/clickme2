@@ -1,0 +1,1638 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>ClickMe — Find Yourself in the Crowd</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ============================================================
+   VARIABLES
+   ============================================================ */
+
+      :root {
+        --dark-0: #101012;
+
+        --dark-1: #18181b;
+
+        --dark-2: #212124;
+
+        --line: #333338;
+
+        --paper: #f4f2ee;
+
+        --red: #e0402c;
+
+        --red-dark: #a13421;
+
+        --green: #3ea36a;
+
+        --text-hi: #f4f2ee;
+
+        --text-lo: #8c8c93;
+
+        --radius: 3px;
+      }
+
+      /* ============================================================
+   RESET
+   ============================================================ */
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+
+        padding: 0;
+      }
+
+      body {
+        background: var(--dark-0);
+
+        color: var(--text-hi);
+
+        font-family: "IBM Plex Sans", sans-serif;
+
+        min-height: 100vh;
+
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ============================================================
+   SPROCKET
+   ============================================================ */
+
+      .sprocket-row {
+        display: flex;
+
+        justify-content: space-evenly;
+
+        padding: 6px 0;
+
+        background: var(--dark-1);
+
+        border-top: 1px solid var(--line);
+
+        border-bottom: 1px solid var(--line);
+      }
+
+      .sprocket-row span {
+        width: 9px;
+
+        height: 9px;
+
+        border-radius: 2px;
+
+        background: var(--dark-0);
+
+        border: 1px solid #000;
+      }
+
+      /* ============================================================
+   HEADER
+   ============================================================ */
+
+      header {
+        padding: 34px 20px 22px;
+
+        text-align: center;
+      }
+
+      .logo {
+        font-family: "Bebas Neue", sans-serif;
+
+        font-size: clamp(40px, 9vw, 64px);
+
+        letter-spacing: 4px;
+
+        line-height: 1;
+
+        margin: 0;
+      }
+
+      .logo span {
+        color: var(--red);
+      }
+
+      .tagline {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 3px;
+
+        text-transform: uppercase;
+
+        color: var(--text-lo);
+
+        margin-top: 10px;
+      }
+
+      /* ============================================================
+   TOGGLE
+   ============================================================ */
+
+      .toggle-wrap {
+        display: flex;
+
+        justify-content: center;
+
+        margin: 26px 0 8px;
+      }
+
+      .toggle {
+        display: inline-flex;
+
+        background: var(--dark-1);
+
+        border: 1px solid var(--line);
+
+        border-radius: 999px;
+
+        padding: 4px;
+      }
+
+      .toggle button {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 12px;
+
+        letter-spacing: 1.5px;
+
+        text-transform: uppercase;
+
+        padding: 10px 20px;
+
+        border-radius: 999px;
+
+        border: none;
+
+        background: transparent;
+
+        color: var(--text-lo);
+
+        cursor: pointer;
+
+        transition: 0.2s;
+      }
+
+      .toggle button.active {
+        background: var(--paper);
+
+        color: var(--dark-0);
+      }
+
+      /* ============================================================
+   MAIN
+   ============================================================ */
+
+      main {
+        max-width: 640px;
+
+        margin: 0 auto;
+
+        padding: 20px 20px 80px;
+      }
+
+      .panel {
+        display: none;
+
+        animation: fadeIn 0.3s ease;
+      }
+
+      .panel.active {
+        display: block;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ============================================================
+   LABELS
+   ============================================================ */
+
+      .field-label {
+        display: block;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 2px;
+
+        text-transform: uppercase;
+
+        color: var(--text-lo);
+
+        margin: 22px 0 8px;
+      }
+
+      /* ============================================================
+   INPUT
+   ============================================================ */
+
+      input[type="text"] {
+        width: 100%;
+
+        background: var(--dark-1);
+
+        border: 1px solid var(--line);
+
+        color: var(--text-hi);
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 15px;
+
+        padding: 13px 14px;
+
+        border-radius: var(--radius);
+
+        outline: none;
+      }
+
+      input[type="text"]:focus {
+        border-color: var(--red);
+      }
+
+      input[type="text"]::placeholder {
+        color: #55555c;
+      }
+
+      /* ============================================================
+   VIEWFINDER
+   ============================================================ */
+
+      .viewfinder {
+        position: relative;
+
+        margin-top: 22px;
+
+        aspect-ratio: 4/3;
+
+        background: #000;
+
+        border-radius: var(--radius);
+
+        overflow: hidden;
+
+        border: 1px solid var(--line);
+      }
+
+      .viewfinder video,
+      .viewfinder img.preview {
+        width: 100%;
+
+        height: 100%;
+
+        object-fit: cover;
+
+        display: block;
+      }
+
+      .corner {
+        position: absolute;
+
+        width: 26px;
+
+        height: 26px;
+
+        border-color: var(--red);
+
+        border-style: solid;
+
+        border-width: 0;
+
+        opacity: 0.9;
+
+        pointer-events: none;
+      }
+
+      .corner.tl {
+        top: 12px;
+        left: 12px;
+
+        border-top-width: 2px;
+        border-left-width: 2px;
+      }
+
+      .corner.tr {
+        top: 12px;
+        right: 12px;
+
+        border-top-width: 2px;
+        border-right-width: 2px;
+      }
+
+      .corner.bl {
+        bottom: 12px;
+        left: 12px;
+
+        border-bottom-width: 2px;
+        border-left-width: 2px;
+      }
+
+      .corner.br {
+        bottom: 12px;
+        right: 12px;
+
+        border-bottom-width: 2px;
+        border-right-width: 2px;
+      }
+
+      /* ============================================================
+   REC
+   ============================================================ */
+
+      .rec-tally {
+        position: absolute;
+
+        top: 12px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 6px;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 1.5px;
+
+        background: rgba(0, 0, 0, 0.55);
+
+        padding: 5px 10px;
+
+        border-radius: 999px;
+      }
+
+      .rec-dot {
+        width: 7px;
+
+        height: 7px;
+
+        border-radius: 50%;
+
+        background: var(--green);
+      }
+
+      .rec-dot.off {
+        background: #555;
+      }
+
+      /* ============================================================
+   EMPTY VIEWFINDER
+   ============================================================ */
+
+      .vf-empty {
+        position: absolute;
+
+        inset: 0;
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        justify-content: center;
+
+        gap: 10px;
+
+        color: var(--text-lo);
+
+        text-align: center;
+      }
+
+      .vf-empty small {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 1px;
+      }
+
+      /* ============================================================
+   FLASH
+   ============================================================ */
+
+      .flash-overlay {
+        position: fixed;
+
+        inset: 0;
+
+        background: #fff;
+
+        opacity: 0;
+
+        pointer-events: none;
+
+        z-index: 50;
+      }
+
+      .flash-overlay.fire {
+        opacity: 1;
+      }
+
+      /* ============================================================
+   CONTROLS
+   ============================================================ */
+
+      .controls {
+        display: flex;
+
+        align-items: center;
+
+        justify-content: center;
+
+        gap: 14px;
+
+        margin-top: 24px;
+
+        flex-wrap: wrap;
+      }
+
+      .shutter-btn {
+        width: 74px;
+
+        height: 74px;
+
+        border-radius: 50%;
+
+        background: var(--paper);
+
+        border: 4px solid var(--dark-2);
+
+        box-shadow: 0 0 0 2px var(--red);
+
+        cursor: pointer;
+      }
+
+      .shutter-btn:active {
+        transform: scale(0.92);
+      }
+
+      .shutter-btn:disabled {
+        opacity: 0.4;
+
+        cursor: not-allowed;
+      }
+
+      .file-btn {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 1.5px;
+
+        text-transform: uppercase;
+
+        color: var(--text-lo);
+
+        background: transparent;
+
+        border: 1px solid var(--line);
+
+        padding: 10px 16px;
+
+        border-radius: var(--radius);
+
+        cursor: pointer;
+      }
+
+      .file-btn:hover {
+        color: var(--text-hi);
+
+        border-color: var(--text-lo);
+      }
+
+      /* ============================================================
+   STATUS
+   ============================================================ */
+
+      .status {
+        margin-top: 20px;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 12px;
+
+        letter-spacing: 1px;
+
+        color: var(--text-lo);
+
+        text-align: center;
+
+        min-height: 18px;
+
+        white-space: pre-wrap;
+      }
+
+      /* ============================================================
+   CONTACT SHEET
+   ============================================================ */
+
+      .contact-sheet {
+        margin-top: 30px;
+      }
+
+      .sheet-label {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 11px;
+
+        letter-spacing: 2px;
+
+        text-transform: uppercase;
+
+        color: var(--text-lo);
+
+        margin-bottom: 12px;
+
+        display: flex;
+
+        justify-content: space-between;
+      }
+
+      .sheet-grid {
+        display: grid;
+
+        grid-template-columns: repeat(3, 1fr);
+
+        gap: 3px;
+
+        background: var(--dark-1);
+
+        border: 1px solid var(--line);
+
+        padding: 10px;
+      }
+
+      .frame {
+        position: relative;
+
+        aspect-ratio: 1/1;
+
+        overflow: hidden;
+
+        background: var(--dark-2);
+
+        border: 1px solid #000;
+      }
+
+      .frame img {
+        width: 100%;
+
+        height: 100%;
+
+        object-fit: cover;
+
+        display: block;
+      }
+
+      .frame .idx {
+        position: absolute;
+
+        bottom: 4px;
+
+        left: 5px;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 9px;
+
+        color: #ddd;
+
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+      }
+
+      .empty-roll {
+        text-align: center;
+
+        padding: 40px 10px;
+
+        color: var(--text-lo);
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 12px;
+
+        letter-spacing: 1px;
+
+        grid-column: 1/-1;
+      }
+
+      /* ============================================================
+   DROPZONE
+   ============================================================ */
+
+      .dropzone {
+        margin-top: 18px;
+
+        border: 1.5px dashed var(--line);
+
+        border-radius: var(--radius);
+
+        padding: 36px 20px;
+
+        text-align: center;
+
+        cursor: pointer;
+
+        transition: 0.15s;
+      }
+
+      .dropzone.drag {
+        border-color: var(--red);
+
+        background: rgba(224, 64, 44, 0.06);
+      }
+
+      .dropzone p {
+        margin: 10px 0 4px;
+
+        font-size: 14px;
+      }
+
+      .dropzone small {
+        font-family: "IBM Plex Mono", monospace;
+
+        color: var(--text-lo);
+
+        font-size: 11px;
+
+        letter-spacing: 1px;
+      }
+
+      /* ============================================================
+   FILE LIST
+   ============================================================ */
+
+      .file-list {
+        margin-top: 14px;
+
+        display: flex;
+
+        flex-wrap: wrap;
+
+        gap: 6px;
+      }
+
+      .file-chip {
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 10.5px;
+
+        background: var(--dark-1);
+
+        border: 1px solid var(--line);
+
+        padding: 5px 9px;
+
+        border-radius: 999px;
+
+        color: var(--text-lo);
+      }
+
+      /* ============================================================
+   PRIMARY BUTTON
+   ============================================================ */
+
+      .primary-btn {
+        width: 100%;
+
+        margin-top: 18px;
+
+        background: var(--red);
+
+        color: #fff;
+
+        border: none;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 12px;
+
+        letter-spacing: 2px;
+
+        text-transform: uppercase;
+
+        padding: 15px;
+
+        border-radius: var(--radius);
+
+        cursor: pointer;
+      }
+
+      .primary-btn:hover {
+        background: var(--red-dark);
+      }
+
+      .primary-btn:disabled {
+        background: #3a3a3d;
+
+        color: var(--text-lo);
+
+        cursor: not-allowed;
+      }
+
+      /* ============================================================
+   RESULT
+   ============================================================ */
+
+      .result-card {
+        margin-top: 20px;
+
+        padding: 18px;
+
+        background: var(--dark-1);
+
+        border: 1px solid var(--line);
+
+        border-left: 3px solid var(--green);
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 12px;
+
+        line-height: 1.9;
+
+        color: var(--text-hi);
+
+        display: none;
+      }
+
+      .result-card.show {
+        display: block;
+      }
+
+      .result-card.err {
+        border-left-color: var(--red);
+      }
+
+      /* ============================================================
+   FOOTER
+   ============================================================ */
+
+      footer {
+        text-align: center;
+
+        padding: 26px 20px 40px;
+
+        font-family: "IBM Plex Mono", monospace;
+
+        font-size: 10px;
+
+        letter-spacing: 1.5px;
+
+        color: #4a4a50;
+      }
+
+      /* ============================================================
+   MOBILE
+   ============================================================ */
+
+      @media (max-width: 420px) {
+        .sheet-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="flash-overlay" id="flashOverlay"></div>
+
+    <div class="sprocket-row">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <header>
+      <h1 class="logo">CLICK<span>ME</span></h1>
+
+      <div class="tagline">find yourself in the crowd</div>
+    </header>
+
+    <div class="toggle-wrap">
+      <div class="toggle">
+        <button id="tabGuest" class="active" onclick="setMode('guest')">
+          I'm a Guest
+        </button>
+
+        <button id="tabPhotographer" onclick="setMode('photographer')">
+          I'm the Photographer
+        </button>
+      </div>
+    </div>
+
+    <main>
+      <!-- ============================================================
+     GUEST
+     ============================================================ -->
+
+      <section id="panelGuest" class="panel active">
+        <label class="field-label"> Event ID </label>
+
+        <input type="text" id="guestEventId" placeholder="e.g. event001" />
+
+        <label class="field-label"> Your Face </label>
+
+        <div class="viewfinder" id="viewfinder">
+          <video id="camVideo" autoplay playsinline muted></video>
+
+          <img id="capturedPreview" class="preview" style="display: none" />
+
+          <div class="vf-empty" id="vfEmpty">
+            <small> CAMERA NOT STARTED </small>
+          </div>
+
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+
+          <div class="rec-tally">
+            <span class="rec-dot off" id="recDot"></span>
+
+            <span id="recLabel"> STANDBY </span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="file-btn" onclick="startCamera()">Start Camera</button>
+
+          <button
+            class="shutter-btn"
+            id="shutterBtn"
+            onclick="captureAndFind()"
+            disabled
+            title="Capture selfie"
+          ></button>
+
+          <label class="file-btn" for="uploadSelfie"> Upload Instead </label>
+
+          <input
+            type="file"
+            id="uploadSelfie"
+            accept="image/jpeg,image/png,image/webp"
+            style="display: none"
+          />
+        </div>
+
+        <div class="status" id="guestStatus"></div>
+
+        <div class="contact-sheet" id="contactSheet" style="display: none">
+          <div class="sheet-label">
+            <span> Contact Sheet </span>
+
+            <span id="frameCount"> 0 frames </span>
+          </div>
+
+          <div class="sheet-grid" id="sheetGrid"></div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+     PHOTOGRAPHER
+     ============================================================ -->
+
+      <section id="panelPhotographer" class="panel">
+        <label class="field-label"> Event ID </label>
+
+        <input type="text" id="photoEventId" placeholder="e.g. event001" />
+
+        <label class="field-label"> Event Photos </label>
+
+        <div class="dropzone" id="dropzone">
+          <p>Drop the event photos here</p>
+
+          <small> OR CLICK TO BROWSE · JPG / PNG </small>
+        </div>
+
+        <input
+          type="file"
+          id="bulkFiles"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          style="display: none"
+        />
+
+        <div class="file-list" id="fileList"></div>
+
+        <button class="primary-btn" id="uploadBtn">
+          Develop &amp; Upload Roll
+        </button>
+
+        <div class="status" id="photoStatus"></div>
+
+        <div class="result-card" id="photoResult"></div>
+      </section>
+    </main>
+
+    <div class="sprocket-row">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <footer>CLICKME · AI-POWERED EVENT MEDIA DELIVERY</footer>
+
+    <script>
+      /* ============================================================
+   API
+   ============================================================ */
+
+      const API_BASE = window.location.origin;
+
+      /* ============================================================
+   MODE
+   ============================================================ */
+
+      function setMode(mode) {
+        document
+          .getElementById("tabGuest")
+          .classList.toggle("active", mode === "guest");
+
+        document
+          .getElementById("tabPhotographer")
+          .classList.toggle("active", mode === "photographer");
+
+        document
+          .getElementById("panelGuest")
+          .classList.toggle("active", mode === "guest");
+
+        document
+          .getElementById("panelPhotographer")
+          .classList.toggle("active", mode === "photographer");
+      }
+
+      /* ============================================================
+   CAMERA
+   ============================================================ */
+
+      let stream = null;
+
+      let capturedBlob = null;
+
+      async function startCamera() {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            setGuestStatus("Camera is not available. Use Upload Instead.");
+
+            return;
+          }
+
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+            },
+          });
+
+          const video = document.getElementById("camVideo");
+
+          video.srcObject = stream;
+
+          video.style.display = "block";
+
+          document.getElementById("capturedPreview").style.display = "none";
+
+          document.getElementById("vfEmpty").style.display = "none";
+
+          document.getElementById("recDot").classList.remove("off");
+
+          document.getElementById("recLabel").textContent = "LIVE";
+
+          document.getElementById("shutterBtn").disabled = false;
+
+          setGuestStatus("Camera ready.");
+        } catch (error) {
+          console.error("Camera error:", error);
+
+          setGuestStatus('Camera access denied. Use "Upload Instead".');
+        }
+      }
+
+      /* ============================================================
+   FLASH
+   ============================================================ */
+
+      function fireFlash() {
+        const overlay = document.getElementById("flashOverlay");
+
+        overlay.classList.add("fire");
+
+        setTimeout(() => {
+          overlay.classList.remove("fire");
+        }, 90);
+      }
+
+      /* ============================================================
+   CAPTURE
+   ============================================================ */
+
+      function captureAndFind() {
+        const video = document.getElementById("camVideo");
+
+        if (!video.videoWidth || !video.videoHeight) {
+          setGuestStatus("Camera is not ready yet.");
+
+          return;
+        }
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = video.videoWidth;
+
+        canvas.height = video.videoHeight;
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(video, 0, 0);
+
+        fireFlash();
+
+        canvas.toBlob(
+          async (blob) => {
+            if (!blob) {
+              setGuestStatus("Could not capture photo.");
+
+              return;
+            }
+
+            capturedBlob = blob;
+
+            const url = URL.createObjectURL(blob);
+
+            document.getElementById("capturedPreview").src = url;
+
+            document.getElementById("capturedPreview").style.display = "block";
+
+            video.style.display = "none";
+
+            document.getElementById("recLabel").textContent = "CAPTURED";
+
+            if (stream) {
+              stream.getTracks().forEach((track) => track.stop());
+
+              stream = null;
+            }
+
+            await sendSelfie(blob, "selfie.jpg");
+          },
+
+          "image/jpeg",
+
+          0.9,
+        );
+      }
+
+      /* ============================================================
+   SELFIE UPLOAD
+   ============================================================ */
+
+      document
+        .getElementById("uploadSelfie")
+        .addEventListener("change", handleUploadSelfie);
+
+      function handleUploadSelfie(event) {
+        const file = event.target.files[0];
+
+        if (!file) {
+          return;
+        }
+
+        const url = URL.createObjectURL(file);
+
+        document.getElementById("capturedPreview").src = url;
+
+        document.getElementById("capturedPreview").style.display = "block";
+
+        document.getElementById("camVideo").style.display = "none";
+
+        document.getElementById("vfEmpty").style.display = "none";
+
+        document.getElementById("recDot").classList.remove("off");
+
+        document.getElementById("recLabel").textContent = "UPLOADED";
+
+        sendSelfie(file, file.name);
+      }
+
+      /* ============================================================
+   STATUS
+   ============================================================ */
+
+      function setGuestStatus(message) {
+        document.getElementById("guestStatus").textContent = message;
+      }
+
+      function setPhotoStatus(message) {
+        document.getElementById("photoStatus").textContent = message;
+      }
+
+      /* ============================================================
+   IMAGE COMPRESSION
+   ============================================================ */
+
+      function compressImage(file, maxDim = 1280, quality = 0.82) {
+        return new Promise((resolve) => {
+          if (!(file instanceof Blob)) {
+            resolve(file);
+
+            return;
+          }
+
+          const image = new Image();
+
+          const url = URL.createObjectURL(file);
+
+          image.onload = () => {
+            URL.revokeObjectURL(url);
+
+            let width = image.width;
+
+            let height = image.height;
+
+            const largest = Math.max(width, height);
+
+            if (largest > maxDim) {
+              const scale = maxDim / largest;
+
+              width = Math.round(width * scale);
+
+              height = Math.round(height * scale);
+            }
+
+            const canvas = document.createElement("canvas");
+
+            canvas.width = width;
+
+            canvas.height = height;
+
+            const ctx = canvas.getContext("2d");
+
+            ctx.drawImage(image, 0, 0, width, height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  resolve(file);
+
+                  return;
+                }
+
+                resolve(
+                  new File([blob], file.name || "image.jpg", {
+                    type: "image/jpeg",
+                  }),
+                );
+              },
+
+              "image/jpeg",
+
+              quality,
+            );
+          };
+
+          image.onerror = () => {
+            URL.revokeObjectURL(url);
+
+            resolve(file);
+          };
+
+          image.src = url;
+        });
+      }
+
+      /* ============================================================
+   SEND SELFIE
+   ============================================================ */
+
+      async function sendSelfie(file, filename) {
+        const eventId = document.getElementById("guestEventId").value.trim();
+
+        if (!eventId) {
+          setGuestStatus("Enter an Event ID first.");
+
+          return;
+        }
+
+        setGuestStatus("Finding your photos...");
+
+        document.getElementById("contactSheet").style.display = "none";
+
+        const readyFile = await compressImage(file);
+
+        const form = new FormData();
+
+        form.append("event_id", eventId);
+
+        form.append("selfie", readyFile, readyFile.name || filename);
+
+        /*
+       IMPORTANT
+
+       Chroma distance is used by backend.
+
+       0 = very similar.
+
+       0.85 is intentionally kept
+       as initial college-demo value.
+    */
+
+        form.append("threshold", "0.85");
+
+        try {
+          const response = await fetch(`${API_BASE}/find-my-photos`, {
+            method: "POST",
+            body: form,
+          });
+
+          const text = await response.text();
+
+          if (!response.ok) {
+            setGuestStatus(
+              `Server error ${response.status}: ${text.slice(0, 200)}`,
+            );
+
+            return;
+          }
+
+          let data;
+
+          try {
+            data = JSON.parse(text);
+          } catch {
+            setGuestStatus("Server returned invalid response.");
+
+            console.error(text);
+
+            return;
+          }
+
+          if (data.status !== "success") {
+            setGuestStatus(data.message || "Could not find photos.");
+
+            return;
+          }
+
+          const matches = Array.isArray(data.matched_photos)
+  ? [...new Set(data.matched_photos)]
+  : [];
+
+          renderContactSheet(matches);
+
+          if (matches.length) {
+            setGuestStatus(`${matches.length} matching photo(s) found.`);
+          } else {
+            setGuestStatus("No matching photos found for this Event ID.");
+          }
+        } catch (error) {
+          console.error("Selfie request error:", error);
+
+          setGuestStatus(`Connection error: ${error.message}`);
+        }
+      }
+
+      /* ============================================================
+   CONTACT SHEET
+   ============================================================ */
+
+      function renderContactSheet(filenames) {
+        const sheet = document.getElementById("contactSheet");
+
+        const grid = document.getElementById("sheetGrid");
+
+        const count = document.getElementById("frameCount");
+
+        grid.innerHTML = "";
+
+        count.textContent = `${filenames.length} frame${
+          filenames.length !== 1 ? "s" : ""
+        }`;
+
+        if (filenames.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-roll">
+                NO FRAMES MATCHED
+            </div>
+            `;
+        } else {
+          filenames.forEach((filename, index) => {
+            const frame = document.createElement("div");
+
+            frame.className = "frame";
+
+            const image = document.createElement("img");
+
+            image.src = `${API_BASE}/photo/${encodeURIComponent(filename)}`;
+
+            image.alt = filename;
+
+            image.loading = "lazy";
+
+            image.onerror = () => {
+              frame.style.background = "#2a2a2d";
+            };
+
+            const label = document.createElement("span");
+
+            label.className = "idx";
+
+            label.textContent = String(index + 1).padStart(2, "0");
+
+            frame.appendChild(image);
+
+            frame.appendChild(label);
+
+            grid.appendChild(frame);
+          });
+        }
+
+        sheet.style.display = "block";
+      }
+
+      /* ============================================================
+   PHOTOGRAPHER FILES
+   ============================================================ */
+
+      let selectedFiles = [];
+
+      const dropzone = document.getElementById("dropzone");
+
+      const bulkInput = document.getElementById("bulkFiles");
+
+      dropzone.addEventListener("click", () => {
+        bulkInput.click();
+      });
+
+      dropzone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+
+        dropzone.classList.add("drag");
+      });
+
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.classList.remove("drag");
+      });
+
+      dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+
+        dropzone.classList.remove("drag");
+
+        addFiles(event.dataTransfer.files);
+      });
+
+      bulkInput.addEventListener("change", () => {
+        addFiles(bulkInput.files);
+      });
+
+      /* ============================================================
+   ADD FILES
+   ============================================================ */
+
+      function addFiles(fileList) {
+        const incoming = Array.from(fileList || []);
+
+        selectedFiles = selectedFiles.concat(
+          incoming.filter((file) => file.type.startsWith("image/")),
+        );
+
+        renderFileList();
+      }
+
+      /* ============================================================
+   FILE LIST
+   ============================================================ */
+
+      function renderFileList() {
+        const list = document.getElementById("fileList");
+
+        list.innerHTML = "";
+
+        selectedFiles.forEach((file) => {
+          const chip = document.createElement("span");
+
+          chip.className = "file-chip";
+
+          chip.textContent = file.name;
+
+          list.appendChild(chip);
+        });
+      }
+
+      /* ============================================================
+   UPLOAD EVENT PHOTOS
+   ============================================================ */
+
+      document
+        .getElementById("uploadBtn")
+        .addEventListener("click", uploadEventPhotos);
+
+      async function uploadEventPhotos() {
+        const eventId = document.getElementById("photoEventId").value.trim();
+
+        const resultCard = document.getElementById("photoResult");
+
+        const button = document.getElementById("uploadBtn");
+
+        resultCard.classList.remove("show", "err");
+
+        resultCard.innerHTML = "";
+
+        if (!eventId) {
+          setPhotoStatus("Enter an Event ID first.");
+
+          return;
+        }
+
+        if (selectedFiles.length === 0) {
+          setPhotoStatus("Add at least one photo.");
+
+          return;
+        }
+
+        button.disabled = true;
+
+        try {
+          setPhotoStatus(`Preparing ${selectedFiles.length} photo(s)...`);
+
+          /*
+           Compress files before upload.
+           This reduces Render RAM/network pressure.
+        */
+
+          const compressedFiles = [];
+
+          for (let i = 0; i < selectedFiles.length; i++) {
+            setPhotoStatus(
+              `Preparing photo ${i + 1} of ${selectedFiles.length}...`,
+            );
+
+            const compressed = await compressImage(selectedFiles[i]);
+
+            compressedFiles.push(compressed);
+          }
+
+          /*
+           Send the whole batch to backend.
+
+           Backend now processes photos synchronously,
+           so when this request finishes the embeddings
+           are actually stored.
+        */
+
+          setPhotoStatus("Developing event roll...");
+
+          const form = new FormData();
+
+          form.append("event_id", eventId);
+
+          compressedFiles.forEach((file) => {
+            form.append("files", file, file.name);
+          });
+
+          const response = await fetch(`${API_BASE}/upload-event-photos`, {
+            method: "POST",
+            body: form,
+          });
+
+          const text = await response.text();
+
+          if (!response.ok) {
+            throw new Error(
+              `Server returned ${response.status}: ${text.slice(0, 200)}`,
+            );
+          }
+
+          let data;
+
+          try {
+            data = JSON.parse(text);
+          } catch {
+            throw new Error("Server returned invalid JSON.");
+          }
+
+          if (data.status !== "success") {
+            throw new Error(data.message || "Upload failed.");
+          }
+
+          resultCard.classList.add("show");
+
+          resultCard.innerHTML = `
+            <strong>ROLL DEVELOPED</strong>
+            <br><br>
+
+            Event:
+            ${escapeHtml(eventId)}
+
+            <br>
+
+            Files uploaded:
+            ${data.files_uploaded}
+
+            <br>
+
+            Faces indexed:
+            ${data.faces_processed}
+
+            <br>
+
+            Files without faces:
+            ${data.files_without_faces}
+
+            <br>
+
+            Failed files:
+            ${data.failed_files}
+            `;
+
+          setPhotoStatus("Done. Photos are ready for face search.");
+
+          /*
+           Clear selected files after successful upload.
+        */
+
+          selectedFiles = [];
+
+          renderFileList();
+
+          bulkInput.value = "";
+        } catch (error) {
+          console.error("Upload error:", error);
+
+          resultCard.classList.add("show", "err");
+
+          resultCard.textContent = `Upload failed: ${error.message}`;
+
+          setPhotoStatus("");
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      /* ============================================================
+   ESCAPE HTML
+   ============================================================ */
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+    </script>
+  </body>
+</html>

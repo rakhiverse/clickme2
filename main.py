@@ -487,9 +487,16 @@ async def upload_event_photos(
 
             continue
 
+        # SECURITY: Use a unique physical filename so
+        # repeated uploads cannot overwrite an existing file.
+        stored_filename = (
+            f"{uuid.uuid4().hex}_"
+            f"{original_filename}"
+        )
+
         save_path = os.path.join(
             UPLOAD_DIR,
-            original_filename
+            stored_filename
         )
 
         try:

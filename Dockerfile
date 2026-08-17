@@ -42,7 +42,7 @@ RUN mkdir -p uploads clickme_db \
 RUN python -c "\
 import insightface; \
 app = insightface.app.FaceAnalysis( \
-    name='buffalo_s', \
+    name='buffalo_sc', \
     allowed_modules=['detection', 'recognition'] \
 ); \
 app.prepare(ctx_id=-1, det_size=(320, 320))"

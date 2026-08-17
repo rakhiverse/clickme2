@@ -45,6 +45,10 @@ MAX_EVENT_PHOTOS = 2000
 MAX_PHOTO_SIZE = 10 * 1024 * 1024      # 10 MB
 MAX_SELFIE_SIZE = 5 * 1024 * 1024      # 5 MB
 
+# Server-controlled face matching threshold.
+# Clients must not be allowed to weaken matching security.
+MATCH_THRESHOLD = 0.85
+
 ALLOWED_IMAGE_EXTENSIONS = {
     ".jpg",
     ".jpeg",
@@ -781,9 +785,6 @@ async def find_my_photos(
 
     selfie: UploadFile = File(...),
 
-    threshold: float = Form(
-        0.85
-    )
 ):
 
     event_id = event_id.strip()
@@ -979,24 +980,10 @@ async def find_my_photos(
         # ----------------------------------------------------
         # THRESHOLD
         # ----------------------------------------------------
+        # SECURITY: Threshold is controlled by the server.
+        # The client cannot weaken or alter matching rules.
 
-        try:
-
-            threshold = float(
-                threshold
-            )
-
-        except Exception:
-
-            threshold = 0.85
-
-        if threshold <= 0:
-
-            threshold = 0.85
-
-        if threshold > 2:
-
-            threshold = 0.85
+        threshold = MATCH_THRESHOLD
 
         print(
             f"[SEARCH] Event={event_id} "

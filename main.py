@@ -37,6 +37,21 @@ app = FastAPI(
 
 
 # ============================================================
+# SECURITY LIMITS
+# ============================================================
+
+MAX_EVENT_PHOTOS = 2000
+MAX_PHOTO_SIZE = 10 * 1024 * 1024      # 10 MB
+MAX_SELFIE_SIZE = 5 * 1024 * 1024      # 5 MB
+
+ALLOWED_IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+}
+
+# ============================================================
 # DIRECTORIES
 # ============================================================
 
@@ -141,6 +156,61 @@ def safe_filename(filename: str):
     return os.path.basename(
         filename
     )
+
+
+# ============================================================
+# SECURITY VALIDATION
+# ============================================================
+
+def is_allowed_image(filename: str):
+
+    if not filename:
+        return False
+
+    extension = os.path.splitext(
+        filename
+    )[1].lower()
+
+    return extension in ALLOWED_IMAGE_EXTENSIONS
+
+
+def is_safe_upload_size(file_size: int, max_size: int):
+
+    if file_size is None:
+        return False
+
+    return 0 < file_size <= max_size
+
+
+def is_valid_image_content(file_path: str):
+
+    try:
+
+        import cv2
+
+        image = cv2.imread(
+            file_path,
+            cv2.IMREAD_COLOR
+        )
+
+        if image is None:
+            return False
+
+        height, width = image.shape[:2]
+
+        return (
+            height > 0
+            and width > 0
+        )
+
+    except Exception as e:
+
+        print(
+            f"[SECURITY] Image validation error: "
+            f"{repr(e)}"
+        )
+
+        return False
 
 
 # ============================================================
@@ -311,6 +381,21 @@ async def upload_event_photos(
     failed_details = []
 
     # --------------------------------------------------------
+    # SECURITY: LIMIT NUMBER OF EVENT PHOTOS
+    # --------------------------------------------------------
+
+    if len(files) > MAX_EVENT_PHOTOS:
+
+        return {
+            "status": "error",
+            "message": (
+                f"Too many photos. Maximum "
+                f"{MAX_EVENT_PHOTOS} photos are allowed "
+                "per upload."
+            )
+        }
+
+    # --------------------------------------------------------
     # PROCESS EACH PHOTO
     # --------------------------------------------------------
 
@@ -324,6 +409,82 @@ async def upload_event_photos(
         )
 
         if not original_filename:
+            continue
+
+        # ----------------------------------------------------
+        # SECURITY: IMAGE EXTENSION
+        # ----------------------------------------------------
+
+        if not is_allowed_image(
+            original_filename
+        ):
+
+            failed_files += 1
+
+            failed_details.append(
+                {
+                    "filename": original_filename,
+                    "error": "Unsupported image file type."
+                }
+            )
+
+            print(
+                f"[SECURITY] Rejected file type: "
+                f"{original_filename}"
+            )
+
+            continue
+
+        # ----------------------------------------------------
+        # SECURITY: FILE SIZE
+        # ----------------------------------------------------
+
+        try:
+
+            file.file.seek(0, os.SEEK_END)
+
+            file_size = file.file.tell()
+
+            file.file.seek(0)
+
+        except Exception as e:
+
+            failed_files += 1
+
+            failed_details.append(
+                {
+                    "filename": original_filename,
+                    "error": "Could not determine file size."
+                }
+            )
+
+            print(
+                f"[SECURITY] Could not inspect size: "
+                f"{original_filename}: {repr(e)}"
+            )
+
+            continue
+
+        if not is_safe_upload_size(
+            file_size,
+            MAX_PHOTO_SIZE
+        ):
+
+            failed_files += 1
+
+            failed_details.append(
+                {
+                    "filename": original_filename,
+                    "error": "File is empty or exceeds the 10 MB limit."
+                }
+            )
+
+            print(
+                f"[SECURITY] Rejected file size: "
+                f"{original_filename} "
+                f"size={file_size} bytes"
+            )
+
             continue
 
         save_path = os.path.join(
@@ -351,6 +512,35 @@ async def upload_event_photos(
                     file.file,
                     output_file
                 )
+
+            # ------------------------------------------------
+            # SECURITY: VERIFY ACTUAL IMAGE CONTENT
+            # ------------------------------------------------
+
+            if not is_valid_image_content(
+                save_path
+            ):
+
+                failed_files += 1
+
+                failed_details.append(
+                    {
+                        "filename": original_filename,
+                        "error": "File is not a valid image."
+                    }
+                )
+
+                print(
+                    f"[SECURITY] Rejected invalid image: "
+                    f"{original_filename}"
+                )
+
+                try:
+                    os.remove(save_path)
+                except Exception:
+                    pass
+
+                continue
 
             files_uploaded += 1
 
@@ -544,6 +734,64 @@ async def find_my_photos(
             "message": "Invalid selfie filename."
         }
 
+    # --------------------------------------------------------
+    # SECURITY: SELFIE FILE TYPE
+    # --------------------------------------------------------
+
+    if not is_allowed_image(
+        selfie_filename
+    ):
+
+        return {
+            "status": "error",
+            "message": (
+                "Unsupported selfie file type. "
+                "Please upload JPG, JPEG, PNG, or WEBP."
+            )
+        }
+
+    # --------------------------------------------------------
+    # SECURITY: SELFIE FILE SIZE
+    # --------------------------------------------------------
+
+    try:
+
+        selfie.file.seek(0, os.SEEK_END)
+
+        selfie_size = selfie.file.tell()
+
+        selfie.file.seek(0)
+
+    except Exception as e:
+
+        print(
+            f"[SECURITY] Could not inspect selfie size: "
+            f"{repr(e)}"
+        )
+
+        return {
+            "status": "error",
+            "message": "Could not validate selfie file."
+        }
+
+    if not is_safe_upload_size(
+        selfie_size,
+        MAX_SELFIE_SIZE
+    ):
+
+        print(
+            f"[SECURITY] Rejected selfie size: "
+            f"{selfie_size} bytes"
+        )
+
+        return {
+            "status": "error",
+            "message": (
+                "Selfie is empty or exceeds "
+                "the 5 MB limit."
+            )
+        }
+
     selfie_name = (
         f"selfie_"
         f"{uuid.uuid4().hex}_"
@@ -570,6 +818,34 @@ async def find_my_photos(
                 selfie.file,
                 output_file
             )
+
+        # ----------------------------------------------------
+        # SECURITY: VERIFY ACTUAL SELFIE IMAGE CONTENT
+        # ----------------------------------------------------
+
+        if not is_valid_image_content(
+            selfie_path
+        ):
+
+            print(
+                f"[SECURITY] Rejected invalid selfie: "
+                f"{selfie_filename}"
+            )
+
+            try:
+                os.remove(selfie_path)
+            except Exception as e:
+                print(
+                    f"[SECURITY] Invalid selfie cleanup failed: "
+                    f"{repr(e)}"
+                )
+
+            return {
+                "status": "error",
+                "message": (
+                    "Uploaded selfie is not a valid image."
+                )
+            }
 
         print(
             f"[SELFIE] Processing: "

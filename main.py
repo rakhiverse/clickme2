@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import uuid
 from typing import List
@@ -161,6 +162,16 @@ def safe_filename(filename: str):
 # ============================================================
 # SECURITY VALIDATION
 # ============================================================
+
+def is_valid_event_id(event_id: str):
+    if not event_id:
+        return False
+
+    return re.fullmatch(
+        r"[A-Za-z0-9_-]{1,100}",
+        event_id
+    ) is not None
+
 
 def is_allowed_image(filename: str):
 
@@ -352,11 +363,14 @@ async def upload_event_photos(
 
     event_id = event_id.strip()
 
-    if not event_id:
+    if not is_valid_event_id(event_id):
 
         return {
             "status": "error",
-            "message": "Event ID is required."
+            "message": (
+                "Invalid Event ID. Use only letters, "
+                "numbers, hyphens, and underscores."
+            )
         }
 
     if not files:
@@ -716,11 +730,14 @@ async def find_my_photos(
 
     event_id = event_id.strip()
 
-    if not event_id:
+    if not is_valid_event_id(event_id):
 
         return {
             "status": "error",
-            "message": "Event ID is required."
+            "message": (
+                "Invalid Event ID. Use only letters, "
+                "numbers, hyphens, and underscores."
+            )
         }
 
     if not selfie.filename:

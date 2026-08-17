@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import shutil
 import uuid
@@ -47,7 +47,7 @@ MAX_SELFIE_SIZE = 5 * 1024 * 1024      # 5 MB
 
 # Server-controlled face matching threshold.
 # Clients must not be allowed to weaken matching security.
-MATCH_THRESHOLD = 0.85
+MATCH_THRESHOLD = 0.95
 
 ALLOWED_IMAGE_EXTENSIONS = {
     ".jpg",

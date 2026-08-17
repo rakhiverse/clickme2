@@ -1374,7 +1374,7 @@
 
             const image = document.createElement("img");
 
-            image.src = `${API_BASE}/photo/${encodeURIComponent(filename)}`;
+            image.src = `${API_BASE}/photo/${encodeURIComponent(currentEventId)}/${encodeURIComponent(filename)}`;
 
             image.alt = filename;
 

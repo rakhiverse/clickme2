@@ -85,8 +85,14 @@ os.makedirs(
 # CONTROLLED PHOTO ACCESS
 # ============================================================
 
-@app.get("/photo/{filename}")
-def get_photo(filename: str):
+@app.get("/photo/{event_id}/{filename}")
+def get_photo(event_id: str, filename: str):
+
+    if not is_valid_event_id(event_id):
+        return {
+            "status": "error",
+            "message": "Invalid Event ID."
+        }
 
     filename = safe_filename(filename)
 
@@ -96,18 +102,67 @@ def get_photo(filename: str):
             "message": "Invalid filename."
         }
 
-    file_path = os.path.join(
-        UPLOAD_DIR,
-        filename
-    )
+    try:
+        collection = get_collection()
 
-    if not os.path.isfile(file_path):
+        results = collection.get(
+            where={
+                "$and": [
+                    {"event_id": event_id},
+                    {"filename": filename}
+                ]
+            },
+            include=["metadatas"]
+        )
+
+        metadatas = results.get("metadatas") or []
+
+        stored_filename = None
+
+        for metadata in metadatas:
+            if metadata:
+                stored_filename = metadata.get(
+                    "stored_filename"
+                )
+                if stored_filename:
+                    break
+
+        if not stored_filename:
+            return {
+                "status": "error",
+                "message": "Photo not found."
+            }
+
+        stored_filename = safe_filename(
+            stored_filename
+        )
+
+        file_path = os.path.join(
+            UPLOAD_DIR,
+            stored_filename
+        )
+
+        if not os.path.isfile(file_path):
+            return {
+                "status": "error",
+                "message": "Photo not found."
+            }
+
+        return FileResponse(file_path)
+
+    except Exception as e:
+
+        print(
+            f"[PHOTO ERROR] "
+            f"event={event_id} "
+            f"filename={filename}: "
+            f"{repr(e)}"
+        )
+
         return {
             "status": "error",
-            "message": "Photo not found."
+            "message": "Photo could not be loaded."
         }
-
-    return FileResponse(file_path)
 
 # ============================================================
 # CHROMADB
@@ -231,7 +286,8 @@ def is_valid_image_content(file_path: str):
 def process_photo_faces(
     save_path: str,
     event_id: str,
-    filename: str
+    filename: str,
+    stored_filename: str
 ):
 
     """
@@ -319,7 +375,8 @@ def process_photo_faces(
                 metadatas=[
                     {
                         "event_id": event_id,
-                        "filename": filename
+                        "filename": filename,
+                        "stored_filename": stored_filename
                     }
                 ]
             )
@@ -579,7 +636,8 @@ async def upload_event_photos(
                 process_photo_faces(
                     save_path,
                     event_id,
-                    original_filename
+                    original_filename,
+                    stored_filename
                 )
             )
 

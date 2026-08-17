@@ -1329,7 +1329,7 @@
   ? [...new Set(data.matched_photos)]
   : [];
 
-          renderContactSheet(matches);
+          renderContactSheet(matches, eventId);
 
           if (matches.length) {
             setGuestStatus(`${matches.length} matching photo(s) found.`);
@@ -1347,7 +1347,7 @@
    CONTACT SHEET
    ============================================================ */
 
-      function renderContactSheet(filenames) {
+      function renderContactSheet(filenames, eventId) {
         const sheet = document.getElementById("contactSheet");
 
         const grid = document.getElementById("sheetGrid");
@@ -1374,7 +1374,7 @@
 
             const image = document.createElement("img");
 
-            image.src = `${API_BASE}/photo/${encodeURIComponent(currentEventId)}/${encodeURIComponent(filename)}`;
+            image.src = `${API_BASE}/photo/${encodeURIComponent(eventId)}/${encodeURIComponent(filename)}`;
 
             image.alt = filename;
 
